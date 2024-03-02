@@ -3,6 +3,9 @@ import AppError from "../errorHandler/error.js"
 import User from "../model/userSchema.js"
 import cloudinary from "cloudinary"
 import fs from "fs/promises"
+import sendemail from "../utils/sendEmail.js"
+import crypto from "crypto"
+import { appendFile } from "fs"
 
     //Cookie option creation
     const cookieOption={
@@ -40,7 +43,6 @@ const register=async (req,res,next)=>{
         return next(new AppError("User registration failed",404))
     }
     //TODO:File upload
-    console.log(JSON.stringify(req.file));
 
     //We can  access our image file  in req.file after adding middleware in router regester
     //that is upload.single("avtar")
@@ -163,9 +165,194 @@ const getUser=async (req,res,next)=>{
         return next(new AppError(err.message,500))
     }
 }
+
+
+
+//Controller for forgot password
+const forgotPassword= async (req,res,next)=>{
+    const {email}=req.body;  //User will provide the email, then we will cheak weather
+                            //the email exist in db or not , if exist then we will 
+                            //create an url and send it to that email
+    if(!email){
+        return next(new AppError("Email not provided",404))
+    }
+    const user=await User.findOne({email})
+    if(!user || user.email!==email){
+        return next(new AppError("Email is not registerd"),404)
+    }
+    
+        const resetToken=await user.generatePasswordResetToken() //Generate random token
+        await user.save()  //Save the forgotPasswordToken and forgotPasswordExpiry to db
+        console.log(resetToken);
+        //Constructing url 
+        /**HERE
+   * req.protocol will send if http or https
+   * req.get('host') will get the hostname
+   * the rest is the route that we will create to verify if token is correct or not
+   */
+        const resetPasswordUrl=`${req.protocol}://${req.get("host")}/api/v1/user/reset/${resetToken}`
+        
+        //OR we can provide the frontend user url in .env file
+        // const resetPasswordUrl=`${process.env.FRONTEND_URL}/reset/${resetToken}`
+
+ try{
+    const subject = 'Reset Password';
+    const message = `You can reset your password by clicking <a href=${resetPasswordUrl} 
+    target="_blank">Reset your password</a>\nIf the above link does not work for 
+    some reason then copy paste this link in new tab ${resetPasswordUrl}.\n 
+    If you have not requested this, kindly ignore.`;
+
+    sendemail(email,subject,message) // Send your url to email using nodemailer liberary
+                                     //email api
+    res.status(200).json({
+        sucess:true,
+        message:`Reset password token send to ${email}`
+    })
+ }       
+catch(err){
+    user.forgotPasswordToken=undefined;
+    user.forgotPasswordExpiry=undefined;
+    await user.save()
+    return next(new AppError(err.message),500)
+}
+}
+
+
+//Controller for reset password
+//FLOW>>>>
+//Part 1>>>>>>>>
+//First if user clicked forgot password>> Ask for email >> Verify email(IF user exist in db)
+//Second Generate a token using crypto and save the encrypted token and expiry date
+//Third Send the generated token in form of url to user email using nodemaler+email api(smpt)
+
+//Part 2>>>>>>>>
+//First if user cliked the url then a new tab will open for reset password will contain
+//reset token in url
+//Second Fetch the reset token from url using params and new password from body
+//Third encrypt token and store in forgotpassword
+//Forth Find if the user exist in db with same forgotpassword and expiry date is
+//not greater then current date
+//5Th  if user exist then change the password to new password and save 
+const resetPassword=async (req,res,next)=>{
+    const resetToken=req.params.resetToken
+    //const {resetToken}=req.params
+    const {password}=req.body
+    if(!password){
+        return next(new AppError("Password field if required to be filled",404))
+    }
+   
+    const forgotPasswordToken=crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex")
+
+    const user=await User.findOne(
+        {forgotPasswordToken,
+        forgotPasswordExpiry:{$gt:Date.now()}} 
+        ////If in db the forgotPasswordExpiry is still stored greated than now time
+
+    )
+    if(!user){
+        return next(new AppError("Token is invalid or expired",404))
+    }
+    try{
+    user.password=password
+    user.forgotPasswordToken=undefined
+    user.forgotPasswordExpiry=undefined
+    await user.save()
+    res.status(200).json({
+        sucess:true,
+        message:"Password changed sucessful"
+    })
+}
+catch(err){
+    user.forgotPasswordToken=undefined
+    user.forgotPasswordExpiry=undefined
+    await user.save()
+    return next (new AppError(err.message,500))
+}
+}
+
+//Coltroller to modify password 
+//User will be already login so we will get id from token
+const changePassword=async (req,res)=>{
+    const{oldPassword,newPassword}=req.body
+    const userId=req.user.id   //Id is set in req.user in jwtAuth middleware
+    if(!oldPassword || !newPassword){
+        return next(new AppError("All fileds are required to be filled",404))
+    }
+    if(oldPassword===newPassword){
+        return next(new AppError("Old password and New password is same",404))
+    }
+    const user=await User.findById(userId).select("+password")
+    if(!user){
+        return next(new AppError("User does not exist",404))
+    }
+    if(user.passwordCompare(oldPassword)==false){
+        return next(new AppError("Password din't not matched",404))
+    }
+
+    user.password=newPassword
+    await user.save()
+    user.password=undefined    //So that if we print user info password should not be printed
+    res.status(200).json({
+        sucess:true,
+        message:"Password modified sucessfully"
+    })
+}
+
+
+//Controller for update user NOTE>>> WE cant update email and password fromn this controller
+//User will be already login so we will get id from token
+const updateUser=async (req,res)=>{
+    const{name}=req.body
+    const userId=req.user.id
+    if(!name){
+        return next(new AppError("All fileds are required to be filled",404))
+    }
+    const user=await User.findById(userId)
+    if(!user){
+        return next(new AppError("User does not exist",404))
+    }
+
+    if(name){
+        user.name=name
+         user.save()
+    }
+    if(req.file){
+        await cloudinary.v2.uploader.destroy(user.avtar.public_id)  //Deleting the exesting file
+        try{ //Creating new life same flow as register
+        const result=await cloudinary.v2.uploader.upload(req.file.path,{
+            folder:"LMS",
+            width:250,
+            height:250,
+            gravity:"face",
+            crop:"fill"
+        })
+    if(result){
+        user.avtar.public_id=result.public_id
+        user.avtar.secure_url=result.secure_url
+    }
+    fs.rm(`uploads/${req.file.filename}`)
+
+    }
+    catch(err){
+        return next(new AppError("Error in uploading thr file",500))
+    }
+}
+await user.save()
+res.status(200).json({
+    sucess:true,
+    message:"User update sucessfull"
+})
+}
 export {
     register,
     login,
     logOut,
-    getUser
+    getUser,
+    forgotPassword,
+    resetPassword,
+    changePassword,
+    updateUser
 }

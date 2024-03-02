@@ -2,6 +2,7 @@ import { timeStamp } from "console";
 import mongoose from "mongoose";
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
+import crypto from "crypto"
 const userSchema=new mongoose.Schema({
     name:{
         type:String,
@@ -76,6 +77,25 @@ userSchema.methods={
             return true
         }
         return false
+    },
+
+    //Generating a random token using crypto
+    async generatePasswordResetToken(){
+        //Creating hax token reffer https://stackoverflow.com/questions/8855687/secure-random-token-in-node-js
+         const resetToken=crypto.randomBytes(20).toString("hex") 
+
+         //Encrypting token before storing it to db
+         //reffer https://nodejs.org/api/crypto.html
+         this.forgotPasswordToken=crypto
+         .createHash("sha256")
+         .update(resetToken)
+         .digest("hex")
+
+         //The token expier in 15 mins After that user can reset password user have 
+         //to again provide the email and new token will be generated
+         this.forgotPasswordExpiry=Date.now()+15*60*1000
+
+         return resetToken
     }
 }
 export default mongoose.model("User",userSchema)
