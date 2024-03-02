@@ -1,0 +1,81 @@
+import { timeStamp } from "console";
+import mongoose from "mongoose";
+import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
+const userSchema=new mongoose.Schema({
+    name:{
+        type:String,
+        maxLength:[50,"User name can be maximum of 50 charecters"],
+        minLength:[3,"User name must be at least of 3 chrecters"],
+        required:[true,"User name is required"],
+        trim:true,
+        lowercase:true
+    },
+    email:{
+        type:String,
+        required:[true,"User email is required"],
+        unique:[true,"User email must be unique"],
+        trim:true,
+        lowercase:true,
+        match: [
+            /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+            'Please fill in a valid email address',
+          ], //before 
+        //quary from database cheak weather the email format is correct 3level validation
+    },
+    password:{
+        type:String,
+        required:[true,"User password is required"],
+        select:false //If we quary data from database bydefault don't show password
+    },
+    
+    avtar:{
+        public_id:{type:String},
+        secure_url:{type:String}
+    },
+//As same schema can be used by user as well as admin so to identify weather
+//we are login as user or admin we user rode field
+    role:{
+         type:String,
+         enum:["USER","ADMIN"], //there is 2 roles USER or ADMIN
+         default:"USER"   //if not speccified login as USER
+    },
+    
+    forgotPasswordToken:{type:String},
+    forgotPasswordExpiry:{type:Date}
+},{timestamps:true})
+
+//Encripying password
+userSchema.pre("save",async function(next){
+    if(!this.isModified("password")){
+        return next()
+    }
+    else{
+        this.password=await bcrypt.hash(this.password,10)
+        return next()
+    }
+})
+
+
+
+
+
+//Creating token
+userSchema.methods={
+    jwtToken(){
+        return jwt.sign(
+                {id:this._id,email:this.email,subscription:this.subscription,role:this.role},
+                process.env.JWT_SECRET_CODE,
+                {expiresIn:'24h'} 
+            )
+    },
+    
+//Password compare method
+    async passwordCompare(planePassword){
+        if(await bcrypt.compare(this.password,planePassword)){
+            return true
+        }
+        return false
+    }
+}
+export default mongoose.model("User",userSchema)
