@@ -9,13 +9,13 @@ import { appendFile } from "fs"
 
     //Cookie option creation
     const cookieOption={
-        maxAge:7*24*60*60*1000, //7days expiry data
+        maxAge:7*24*60*60*1000, //7days in expiry data
         httpOnly:true,
         secure:true
     }
 //Register user
 const register=async (req,res,next)=>{
-    const {name,email,password}=req.body
+    const {name,email,password,role}=req.body
     if(!name || !email || !password){
         return next(new AppError("All the fields are required",404))
     }
@@ -32,6 +32,7 @@ const register=async (req,res,next)=>{
         name,
         email,
         password,
+        role,
         avtar: {
           public_id: email,
           secure_url:"nadeem"
@@ -106,7 +107,7 @@ const login=async (req,res,next)=>{
     try{
     const user=await User.findOne({email}).select("+password")
     //password compairing at userSchema level
-    if(!user || user.passwordCompare(password)==false){
+    if(!user ||await user.passwordCompare(password,user.password)==false){
         return next(new AppError("Emailor password is incorrect",404))
     }
 
@@ -317,7 +318,7 @@ const updateUser=async (req,res)=>{
 
     if(name){
         user.name=name
-         user.save()
+        await user.save()
     }
     if(req.file){
         await cloudinary.v2.uploader.destroy(user.avtar.public_id)  //Deleting the exesting file

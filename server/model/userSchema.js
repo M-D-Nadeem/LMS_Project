@@ -72,8 +72,9 @@ userSchema.methods={
     },
     
 //Password compare method
-    async passwordCompare(planePassword){
-        if(await bcrypt.compare(this.password,planePassword)){
+    async passwordCompare(planePassword,userPassword){
+        const result=await bcrypt.compare(planePassword,userPassword)
+        if(result==true){
             return true
         }
         return false
@@ -82,7 +83,7 @@ userSchema.methods={
     //Generating a random token using crypto
     async generatePasswordResetToken(){
         //Creating hax token reffer https://stackoverflow.com/questions/8855687/secure-random-token-in-node-js
-         const resetToken=crypto.randomBytes(20).toString("hex") 
+         const resetToken=await crypto.randomBytes(20).toString("hex") 
 
          //Encrypting token before storing it to db
          //reffer https://nodejs.org/api/crypto.html
