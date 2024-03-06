@@ -15,7 +15,7 @@ import { appendFile } from "fs"
     }
 //Register user
 const register=async (req,res,next)=>{
-    const {name,email,password,role}=req.body
+    const {name,email,password,role}=req.body    //Give this all in form data
     if(!name || !email || !password){
         return next(new AppError("All the fields are required",404))
     }
@@ -123,13 +123,14 @@ const login=async (req,res,next)=>{
         message:"Login sucessfully",
         data:user
     })
+ 
 }
 catch(err){
     console.log("ERROR in login",err);
     return next(new AppError(err.message,500))
 }
 }
-
+ 
 const logOut=async (req,res,next)=>{
     try{
     res.cookie("token","null",{
@@ -308,9 +309,6 @@ const changePassword=async (req,res)=>{
 const updateUser=async (req,res)=>{
     const{name}=req.body
     const userId=req.user.id
-    if(!name){
-        return next(new AppError("All fileds are required to be filled",404))
-    }
     const user=await User.findById(userId)
     if(!user){
         return next(new AppError("User does not exist",404))
@@ -327,7 +325,7 @@ const updateUser=async (req,res)=>{
             folder:"LMS",
             width:250,
             height:250,
-            gravity:"face",
+            gravity:"face", 
             crop:"fill"
         })
     if(result){

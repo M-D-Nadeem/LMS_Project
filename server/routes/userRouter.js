@@ -6,7 +6,7 @@ import upload from "../middleware/multerMiddleware.js"
 
 router.post("/register/",upload.single("avtar"),register)
 router.post("/login",login)
-router.get("/logOut",jwtAuth,logOut)
+router.get("/logout",jwtAuth,logOut)
 router.get("/getUser",jwtAuth,getUser)
 router.post("/reset",forgotPassword)
 router.post("/reset/:resetToken",resetPassword)

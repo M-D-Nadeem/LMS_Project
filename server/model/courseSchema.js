@@ -18,7 +18,7 @@ const courseSchema=new mongoose.Schema({
     category:{
         type:String,
         required:[true,"Category is reqired to be given"],
-    }, 
+    },
     createdBy:{
         type:String,
         required:[true,"Created by not given"]
@@ -36,15 +36,22 @@ const courseSchema=new mongoose.Schema({
     },
 
     //This lectures contains information about the lectures in the perticula courses
-    lectures:[{
-        title:{type:String},
-        description:{trype:String},
-        lecture:{
-            public_id:{type:String},
-            secure_url:{type:String}
-        }
-    }
-    ],
+    lectures: [
+        {
+          title: String,
+          description: String,
+          lecture: {
+            public_id: {
+              type: String,
+           
+            },
+            secure_url: {
+              type: String,
+             
+            },
+          },
+        },
+      ],
     numberOfLectures:{
         type:Number,
         default:0

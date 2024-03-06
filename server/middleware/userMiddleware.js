@@ -1,14 +1,5 @@
-
-const errorMiddleware=(err,req,res,next)=>{
-    err.message=err.message || "Somethng went wrong"
-    err.statusCode=err.statucCode || 404
-    res.status(err.statusCode).json({
-        sucess:false,
-        message:err.message,
-        stack:err.stack
-    })
-}
-
+import AppError from "../errorHandler/error.js"
+import { log } from "console"
 import jwt from "jsonwebtoken"
 const jwtAuth=(req,res,next)=>{
     const token=(req.cookies.token) || null
@@ -20,8 +11,8 @@ const jwtAuth=(req,res,next)=>{
     }
     try{
         const payload=jwt.verify(token,process.env.JWT_SECRET_CODE)
-        req.user={id:payload.id,email:payload.email}
-    }
+        req.user=payload
+    } 
     catch(err){
         res.status(500).json({
             sucess:false,
@@ -30,4 +21,15 @@ const jwtAuth=(req,res,next)=>{
     }
     next()
 }
-export { errorMiddleware  ,jwtAuth}
+
+const authorizedRoles=(role)=>
+async (req,res,next)=>{
+         const currentRole=req.user.role
+         if(role!=currentRole){
+           return next(new AppError("You don't have the permission to access",404))
+            
+         }
+         next()
+}
+
+export {jwtAuth,authorizedRoles}

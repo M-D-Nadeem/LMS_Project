@@ -2,7 +2,7 @@ import cookieParser from "cookie-parser"
 import express, { urlencoded } from "express"
 import cors from "cors"
 import morgan from "morgan"
-import {errorMiddleware} from "./middleware/userMiddleware.js"
+import errorMiddleware from "./middleware/errorMiddleware.js"
 import userRouter from "./routes/userRouter.js"
 import courseRouter from "./routes/courseRouter.js"
 const app=express()
