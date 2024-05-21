@@ -1,4 +1,4 @@
-import AppError from "../errorHandler/error.js"
+
 const errorMiddleware=(err,req,res,next)=>{
     err.message=err.message || "Somethng went wrong"
     err.statusCode=err.statucCode || 404

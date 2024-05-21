@@ -1,6 +1,8 @@
 import AppError from "../errorHandler/error.js"
 import { log } from "console"
 import jwt from "jsonwebtoken"
+
+import User from "../model/userSchema.js"
 const jwtAuth=(req,res,next)=>{
     const token=(req.cookies.token) || null
     if(!token){
@@ -32,4 +34,13 @@ async (req,res,next)=>{
          next()
 }
 
-export {jwtAuth,authorizedRoles}
+const authorizeSubscribers=async (req,res,next)=>{
+    // If user is USER or does not have an active subscription then error else pass
+    //for getUser
+    const user=await User.findById(req.user.id)
+    if( user.subscription.status !== "active"){
+        return next(new AppError("Please subscribe to access this route.", 403));
+    }
+    next()
+}
+export {jwtAuth,authorizedRoles,authorizeSubscribers}

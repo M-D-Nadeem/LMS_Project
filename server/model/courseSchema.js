@@ -5,7 +5,7 @@ const courseSchema=new mongoose.Schema({
     title:{
         type:String,
         required:[true,"Title is reqired to be given"],
-        minLength:[8,"Title must be of atleat 8 charecters"],
+        minLength:[5,"Title must be of atleat 8 charecters"],
         maxLength:[20,"Title can not be more than 20 charecters"],
         trim:true
     },
@@ -60,3 +60,4 @@ const courseSchema=new mongoose.Schema({
 },{timestamps:true})
 
 export default mongoose.model("Course",courseSchema)
+//Here <<<Course>>> is the name of the collection of courseSchema

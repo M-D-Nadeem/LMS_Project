@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer"
+import nodemailer from "nodemailer" 
 
 //Copy and paste the code from nodemailer library reffer https://nodemailer.com/
 
@@ -19,9 +19,9 @@ const transporter = nodemailer.createTransport({
 // async..await is not allowed in global scope, must use a wrapper
 
   // send mail with defined transport object
-await transporter.sendMail({
-    from: process.env.SMPT_FROM_EMAIL, // sender address
-    to: email, // list of receivers
+await transporter.sendMail({ 
+    from: email, // sender address
+    to: process.env.CONTACT_US_EMAIL, // list of receivers
     subject: subject, // Subject line
     text: message, // plain text body
     html:message, // html body

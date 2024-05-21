@@ -4,7 +4,7 @@ import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import crypto from "crypto"
 const userSchema=new mongoose.Schema({
-    name:{
+    fullName:{
         type:String,
         maxLength:[50,"User name can be maximum of 50 charecters"],
         minLength:[3,"User name must be at least of 3 chrecters"],
@@ -43,7 +43,13 @@ const userSchema=new mongoose.Schema({
     },
     
     forgotPasswordToken:{type:String},
-    forgotPasswordExpiry:{type:Date}
+    forgotPasswordExpiry:{type:Date},
+    
+    //Will store the current status of user in case of subscription
+    subscription:{
+        id:{type:String},
+        status:{type:String}
+    }
 },{timestamps:true})
 
 //Encripying password
@@ -100,3 +106,4 @@ userSchema.methods={
     }
 }
 export default mongoose.model("User",userSchema)
+//Here <<<User>>> is the name of the collection of userSchema

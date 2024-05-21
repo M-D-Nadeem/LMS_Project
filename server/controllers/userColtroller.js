@@ -15,24 +15,23 @@ import { appendFile } from "fs"
     }
 //Register user
 const register=async (req,res,next)=>{
-    const {name,email,password,role}=req.body    //Give this all in form data
-    if(!name || !email || !password){
-        return next(new AppError("All the fields are required",404))
+    const {fullName,email,password}=req.body     //Give this all in form data
+    if(!fullName || !email || !password){
+        return next(new AppError("All the fields are required",402))
     }
 
     //Finding user already exist using user email
     const userExist=await User.findOne({email})
     if(userExist && userExist.email===email){
-        return next(new AppError("USer already exist with same email",404))
+        return next(new AppError("USer already exist with same email",405))
     }
     try{
         
     //creating user
     const user =await User.create({
-        name,
+        fullName,
         email,
         password,
-        role,
         avtar: {
           public_id: email,
           secure_url:"nadeem"
@@ -41,7 +40,7 @@ const register=async (req,res,next)=>{
 
     //if failed to create user
     if(!user){
-        return next(new AppError("User registration failed",404))
+        return next(new AppError("User registration failed",406))
     }
     //TODO:File upload
 
@@ -80,7 +79,7 @@ const register=async (req,res,next)=>{
     await user.save()
     user.password=undefined //password undefined before storing in cookie
    // Cookie creation
-   const token=await user.jwtToken()
+    const token=await user.jwtToken()
     res.cookie("token",token,cookieOption)
 
 
@@ -107,7 +106,7 @@ const login=async (req,res,next)=>{
     try{
     const user=await User.findOne({email}).select("+password")
     //password compairing at userSchema level
-    if(!user ||await user.passwordCompare(password,user.password)==false){
+    if(!user || await user.passwordCompare(password,user.password)==false){
         return next(new AppError("Emailor password is incorrect",404))
     }
 
@@ -118,7 +117,7 @@ const login=async (req,res,next)=>{
     res.cookie("token",token,cookieOption)
 
     //sucess message
-    res.status(200).json({
+    return res.status(200).json({
         sucess:true,
         message:"Login sucessfully",
         data:user
@@ -138,7 +137,7 @@ const logOut=async (req,res,next)=>{
         maxAge:0,
         httpOnly:true
     })
-    res.status(200).json({
+    return res.status(200).json({
         sucess:true,
         message:"Log out sucessful"
     })
@@ -156,7 +155,7 @@ const getUser=async (req,res,next)=>{
     if(!user){
         return next(new AppError("Failed to fetch user information",404))
     }
-    res.status(200).json({
+    return res.status(200).json({
         sucess:true,
         message:"User found sucessfully",
         data:user
@@ -192,7 +191,7 @@ const forgotPassword= async (req,res,next)=>{
    * req.get('host') will get the hostname
    * the rest is the route that we will create to verify if token is correct or not
    */
-        const resetPasswordUrl=`${req.protocol}://${req.get("host")}/api/v1/user/reset/${resetToken}`
+        const resetPasswordUrl=`${req.protocol}://${req.get("host")}/api/user/reset/${resetToken}`
         
         //OR we can provide the frontend user url in .env file
         // const resetPasswordUrl=`${process.env.FRONTEND_URL}/reset/${resetToken}`
@@ -307,15 +306,15 @@ const changePassword=async (req,res)=>{
 //Controller for update user NOTE>>> WE cant update email and password fromn this controller
 //User will be already login so we will get id from token
 const updateUser=async (req,res)=>{
-    const{name}=req.body
+    const{fullName}=req.body
     const userId=req.user.id
     const user=await User.findById(userId)
     if(!user){
         return next(new AppError("User does not exist",404))
     }
 
-    if(name){
-        user.name=name
+    if(fullName){
+        user.fullName=fullName
         await user.save()
     }
     if(req.file){
@@ -340,9 +339,11 @@ const updateUser=async (req,res)=>{
     }
 }
 await user.save()
-res.status(200).json({
+const data=await User.findById(userId)
+ return res.status(200).json({
     sucess:true,
-    message:"User update sucessfull"
+    message:"User update sucessfull",
+    data:data
 })
 }
 export {

@@ -76,10 +76,8 @@ try{
     if(req.file){
         const result=await cloudinary.v2.uploader.upload(req.file.path,{
             folder:"LMS",
-            width:250,
-            height:250,
-            gravity:"face",
-            crop:"fill"
+            
+            
         })
         if(result){
             course.thumbnail.public_id=result.public_id,
@@ -196,6 +194,7 @@ const updateCourse=async (req,res,next)=>{
     }
 }
 
+//Controller to delete Course
 const deleteCourse=async (req,res,next)=>{
     const courseId=req.params.courseId
     if(!courseId){
@@ -216,6 +215,8 @@ const deleteCourse=async (req,res,next)=>{
         return next(new AppError(err.message,500))
     }
 }
+
+//Add lectures to the course using courseId
 const addLectureToCourseById=async (req,res,next)=>{
     const{title,description}=req.body
     const courseId=req.params.courseId
@@ -229,13 +230,14 @@ const addLectureToCourseById=async (req,res,next)=>{
         }
         const lecture={}
         if(req.file){
+            console.log("req file",req.file);
+            try{
             const result=await cloudinary.v2.uploader.upload(req.file.path,{
                 folder:"LMS",
-                width:250,
-                height:250,
-                gravity:"face",
-                crop:"fill"
+                resource_type: 'video',
+                allowed_formats: ['mp4', 'webm']
             })
+            console.log(result);
             if(result){
             
             lecture.public_id=result.public_id,
@@ -244,12 +246,16 @@ const addLectureToCourseById=async (req,res,next)=>{
             }
             fs.rm(`uploads/${req.file.filename}`)
         }
-        const lectureIndex=course.lectures.numberOfLectures-1
+        catch(err){
+            console.error("Error uploading to Cloudinary:", err);
+        }
+    }
+
         course.lectures.push({title,description,lecture})
         course.numberOfLectures=course.lectures.length
         await course.save()
        return res.status(200).json({
-        suscess:true,
+        sucess:true,
         message:"Lecture uploaded sucessfully",
         data:course
        })
@@ -259,17 +265,24 @@ const addLectureToCourseById=async (req,res,next)=>{
     }
 }
 
+//Delete lecture from course using course id
 const deleteLectureToCourseById=async(req,res,next)=>{
     const courseId=req.params.courseId;
-    const _id=req.params.lectureId
+    const lectureId=req.params.lectureId
     try{
         const course=await Course.findById(courseId)
-        const lectureIndex=await course.lectures.findIndex((_id)=>_id.toString())
+        
+        //Find the index of the lecture you want to delete from the lectures
+        const lectureIndex=await course.lectures.findIndex((element)=>lectureId.toString()===element._id.toString())
+
+        //if findIndex can't find any then it returns -1
         if(lectureIndex==-1){
             return next(new AppError('Lecture does not exist.', 404));
         }
+        //Removing lecture image from cloudinary
         await cloudinary.v2.uploader.destroy(course.lectures[lectureIndex].lecture.public_id)
-        course.lectures.splice(lectureIndex,1)
+        //Removing title,description and public_id,secure_url from data base 
+        course.lectures.splice(lectureIndex,1) //Remove 1 element start from lectureIndex
         course.numberOfLectures=course.lectures.length
         await course.save()
         return res.status(200).json({
