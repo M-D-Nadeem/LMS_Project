@@ -139,7 +139,7 @@ Start the frontend development server:
 
 ## Authors
 
-- [@MD Nadeem]([https://www.github.com/octokatherine](https://github.com/M-D-Nadeem))
+- [@MD Nadeem](https://github.com/M-D-Nadeem)
 
 
 ## Demo
